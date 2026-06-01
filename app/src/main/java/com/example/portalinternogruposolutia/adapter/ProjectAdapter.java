@@ -19,10 +19,28 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
 
     private List<Project> projects;
     private boolean readOnly;
+    private OnProjectClickListener clickListener;
+    private OnProjectLongClickListener longClickListener;
+
+    public interface OnProjectClickListener {
+        void onProjectClick(Project project);
+    }
+
+    public interface OnProjectLongClickListener {
+        boolean onProjectLongClick(Project project);
+    }
 
     public ProjectAdapter(List<Project> projects, boolean readOnly) {
         this.projects = projects;
         this.readOnly = readOnly;
+    }
+
+    public void setOnProjectClickListener(OnProjectClickListener listener) {
+        this.clickListener = listener;
+    }
+
+    public void setOnProjectLongClickListener(OnProjectLongClickListener listener) {
+        this.longClickListener = listener;
     }
 
     public void updateList(List<Project> newList, boolean readOnly) {
@@ -62,6 +80,14 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
             tag.setText(tech);
             h.tagsContainer.addView(tag);
         }
+
+        h.itemView.setOnClickListener(v -> {
+            if (clickListener != null) clickListener.onProjectClick(p);
+        });
+
+        h.itemView.setOnLongClickListener(v -> {
+            return longClickListener != null && longClickListener.onProjectLongClick(p);
+        });
     }
 
     @Override

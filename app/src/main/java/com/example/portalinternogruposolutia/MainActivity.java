@@ -1,16 +1,16 @@
 package com.example.portalinternogruposolutia;
 
 import android.app.AlertDialog;
-import android.graphics.drawable.GradientDrawable;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -21,11 +21,16 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.portalinternogruposolutia.adapter.ProjectAdapter;
 import com.example.portalinternogruposolutia.model.Project;
 import com.example.portalinternogruposolutia.model.User;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final int REQUEST_FORM = 100;
 
     private RecyclerView recycler;
     private ProjectAdapter adapter;
@@ -34,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText searchInput;
     private LinearLayout statusChipsContainer;
     private LinearLayout techChipsContainer;
+    private FloatingActionButton fabAdd;
 
     private List<Project> allProjects;
     private List<User> users;
@@ -42,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private String currentStatusFilter = "all";
     private String currentTechFilter = "all";
     private String searchQuery = "";
+    private int nextProjectId = 100;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +58,8 @@ public class MainActivity extends AppCompatActivity {
         allProjects = MockData.getProjects();
         users = MockData.getUsers();
         currentUser = users.get(0);
+
+        nextProjectId = allProjects.stream().mapToInt(Project::getId).max().orElse(10) + 1;
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -67,15 +76,122 @@ public class MainActivity extends AppCompatActivity {
         searchInput = findViewById(R.id.searchInput);
         statusChipsContainer = findViewById(R.id.statusChips);
         techChipsContainer = findViewById(R.id.techChips);
+        fabAdd = findViewById(R.id.fabAdd);
 
         recycler.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new ProjectAdapter(allProjects, isReadOnly());
+        adapter = new ProjectAdapter(getFilteredList(), isReadOnly());
         recycler.setAdapter(adapter);
+
+        adapter.setOnProjectClickListener(this::onEditProject);
+        adapter.setOnProjectLongClickListener(this::onDeleteProject);
 
         setupSearch();
         setupStatusChips();
         setupTechChips();
         updateResultsCount(allProjects.size());
+        updateFabVisibility();
+
+        fabAdd.setOnClickListener(v -> onAddProject());
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_FORM && resultCode == RESULT_OK && data != null) {
+            String name = data.getStringExtra(ProjectFormActivity.RESULT_NAME);
+            String description = data.getStringExtra(ProjectFormActivity.RESULT_DESCRIPTION);
+            String status = data.getStringExtra(ProjectFormActivity.RESULT_STATUS);
+            String techText = data.getStringExtra(ProjectFormActivity.RESULT_TECHNOLOGIES);
+            String department = data.getStringExtra(ProjectFormActivity.RESULT_DEPARTMENT);
+            String statusLabel = data.getStringExtra("statusLabel");
+            int editId = data.getIntExtra(ProjectFormActivity.EXTRA_PROJECT_ID, -1);
+
+            List<String> technologies = techText == null || techText.isEmpty()
+                ? new ArrayList<>()
+                : Arrays.stream(techText.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toList());
+
+            if (editId >= 0) {
+                for (int i = 0; i < allProjects.size(); i++) {
+                    Project p = allProjects.get(i);
+                    if (p.getId() == editId) {
+                        p.setName(name);
+                        p.setDescription(description);
+                        p.setStatus(status);
+                        p.setStatusLabel(statusLabel);
+                        p.setTechnologies(technologies);
+                        p.setDepartment(department);
+                        break;
+                    }
+                }
+            } else {
+                Project project = new Project(nextProjectId++, name, description,
+                    status, statusLabel, technologies, department);
+                allProjects.add(project);
+            }
+
+            updateTechChips();
+            applyFilters();
+        }
+    }
+
+    private void onAddProject() {
+        if (!canEdit()) {
+            Toast.makeText(this, "No tienes permiso para añadir proyectos", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Intent intent = new Intent(this, ProjectFormActivity.class);
+        intent.putExtra(ProjectFormActivity.EXTRA_MODE, ProjectFormActivity.MODE_ADD);
+        startActivityForResult(intent, REQUEST_FORM);
+    }
+
+    private void onEditProject(Project project) {
+        if (isReadOnly()) {
+            showProjectDetail(project);
+            return;
+        }
+        Intent intent = new Intent(this, ProjectFormActivity.class);
+        intent.putExtra(ProjectFormActivity.EXTRA_MODE, ProjectFormActivity.MODE_EDIT);
+        intent.putExtra(ProjectFormActivity.EXTRA_PROJECT_ID, project.getId());
+        intent.putExtra(ProjectFormActivity.RESULT_NAME, project.getName());
+        intent.putExtra(ProjectFormActivity.RESULT_DESCRIPTION, project.getDescription());
+        intent.putExtra(ProjectFormActivity.RESULT_STATUS, project.getStatus());
+        intent.putExtra(ProjectFormActivity.RESULT_TECHNOLOGIES,
+            String.join(", ", project.getTechnologies()));
+        intent.putExtra(ProjectFormActivity.RESULT_DEPARTMENT, project.getDepartment());
+        startActivityForResult(intent, REQUEST_FORM);
+    }
+
+    private void showProjectDetail(Project p) {
+        new AlertDialog.Builder(this)
+            .setTitle(p.getName())
+            .setMessage("Estado: " + p.getStatusLabel()
+                + "\nDescripción: " + p.getDescription()
+                + "\nTecnologías: " + String.join(", ", p.getTechnologies())
+                + "\nDepartamento: " + p.getDepartment())
+            .setPositiveButton("Cerrar", null)
+            .show();
+    }
+
+    private boolean onDeleteProject(Project project) {
+        if (!isAdmin()) {
+            Toast.makeText(this, "Solo el administrador puede eliminar proyectos", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+        new AlertDialog.Builder(this)
+            .setTitle("Eliminar proyecto")
+            .setMessage("¿Eliminar \"" + project.getName() + "\"?")
+            .setPositiveButton("Eliminar", (d, w) -> {
+                allProjects.remove(project);
+                updateTechChips();
+                applyFilters();
+                Toast.makeText(this, "Proyecto eliminado", Toast.LENGTH_SHORT).show();
+            })
+            .setNegativeButton("Cancelar", null)
+            .show();
+        return true;
     }
 
     private void setupSearch() {
@@ -111,6 +227,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupTechChips() {
+        techChipsContainer.removeAllViews();
         View allChip = createChip("Todas", true);
         allChip.setTag("all");
         allChip.setOnClickListener(v -> {
@@ -133,6 +250,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void updateTechChips() {
+        currentTechFilter = "all";
+        setupTechChips();
+    }
+
     private View createChip(String text, boolean selected) {
         TextView chip = (TextView) LayoutInflater.from(this)
                 .inflate(R.layout.item_chip, statusChipsContainer, false);
@@ -152,18 +274,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void applyFilters() {
-        List<Project> filtered = allProjects.stream()
+    private List<Project> getFilteredList() {
+        return allProjects.stream()
             .filter(p -> currentStatusFilter.equals("all") || p.getStatus().equals(currentStatusFilter))
             .filter(p -> currentTechFilter.equals("all") || p.getTechnologies().contains(currentTechFilter))
             .filter(p -> searchQuery.isEmpty() || p.getName().toLowerCase().contains(searchQuery))
             .collect(Collectors.toList());
+    }
 
+    private void applyFilters() {
+        List<Project> filtered = getFilteredList();
         adapter.updateList(filtered, isReadOnly());
-
         boolean empty = filtered.isEmpty();
         emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
-
         updateResultsCount(filtered.size());
     }
 
@@ -176,6 +299,10 @@ public class MainActivity extends AppCompatActivity {
         if (getSupportActionBar() != null) {
             getSupportActionBar().setSubtitle(currentUser.getName() + " · " + currentUser.getRoleLabel());
         }
+    }
+
+    private void updateFabVisibility() {
+        fabAdd.setVisibility(canEdit() ? View.VISIBLE : View.GONE);
     }
 
     private void showUserSwitchDialog() {
@@ -193,16 +320,8 @@ public class MainActivity extends AppCompatActivity {
             .setSingleChoiceItems(names, selected, (dialog, which) -> {
                 currentUser = users.get(which);
                 updateToolbarSubtitle();
-                adapter.updateList(
-                    ((ProjectAdapter) recycler.getAdapter()).getItemCount() > 0
-                        ? allProjects.stream()
-                            .filter(p -> currentStatusFilter.equals("all") || p.getStatus().equals(currentStatusFilter))
-                            .filter(p -> currentTechFilter.equals("all") || p.getTechnologies().contains(currentTechFilter))
-                            .filter(p -> searchQuery.isEmpty() || p.getName().toLowerCase().contains(searchQuery))
-                            .collect(Collectors.toList())
-                        : allProjects,
-                    isReadOnly()
-                );
+                updateFabVisibility();
+                adapter.updateList(getFilteredList(), isReadOnly());
                 dialog.dismiss();
             })
             .setNegativeButton("Cancelar", null)
@@ -211,5 +330,13 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isReadOnly() {
         return currentUser.getRole().equals("visitor");
+    }
+
+    private boolean canEdit() {
+        return currentUser.getRole().equals("admin") || currentUser.getRole().equals("tech");
+    }
+
+    private boolean isAdmin() {
+        return currentUser.getRole().equals("admin");
     }
 }

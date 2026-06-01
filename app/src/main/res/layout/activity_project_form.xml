@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFF8FAFC"
+    tools:context=".ProjectFormActivity">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/primary"
+        app:elevation="0dp">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbarForm"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/primary"
+            app:title="Nuevo Proyecto"
+            app:titleTextColor="@android:color/white"
+            app:navigationIcon="?attr/homeAsUpIndicator" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="20dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Project Name -->
+            <TextView style="@style/FormLabel" android:text="Nombre del proyecto" />
+            <EditText
+                android:id="@+id/formName"
+                style="@style/FormInput"
+                android:hint="ej. Gestor de Incidencias"
+                android:inputType="text"
+                android:importantForAutofill="no" />
+
+            <!-- Description -->
+            <TextView style="@style/FormLabel" android:text="Descripción" android:layout_marginTop="16dp" />
+            <EditText
+                android:id="@+id/formDescription"
+                style="@style/FormInput"
+                android:hint="Descripción del proyecto"
+                android:inputType="textMultiLine"
+                android:minLines="3"
+                android:maxLines="5"
+                android:gravity="top"
+                android:importantForAutofill="no" />
+
+            <!-- Status -->
+            <TextView style="@style/FormLabel" android:text="Estado" android:layout_marginTop="16dp" />
+            <RadioGroup
+                android:id="@+id/formStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
+
+                <RadioButton
+                    android:id="@+id/statusProduction"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Producción"
+                    android:textSize="13sp"
+                    android:checked="true" />
+
+                <RadioButton
+                    android:id="@+id/statusDevelopment"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="En Desarrollo"
+                    android:textSize="13sp" />
+
+                <RadioButton
+                    android:id="@+id/statusMaintenance"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Mantenimiento"
+                    android:textSize="13sp" />
+
+            </RadioGroup>
+
+            <!-- Technologies -->
+            <TextView style="@style/FormLabel" android:text="Tecnologías" android:layout_marginTop="16dp" />
+            <EditText
+                android:id="@+id/formTechnologies"
+                style="@style/FormInput"
+                android:hint="ej. React, Node.js, SQL (separadas por coma)"
+                android:inputType="text"
+                android:importantForAutofill="no" />
+
+            <!-- Department -->
+            <TextView style="@style/FormLabel" android:text="Departamento" android:layout_marginTop="16dp" />
+            <EditText
+                android:id="@+id/formDepartment"
+                style="@style/FormInput"
+                android:hint="ej. Sistemas"
+                android:inputType="text"
+                android:importantForAutofill="no" />
+
+            <!-- Save Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSave"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="28dp"
+                android:text="Guardar proyecto"
+                android:textSize="16sp"
+                android:textAllCaps="false"
+                app:cornerRadius="12dp"
+                app:backgroundTint="@color/primary" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

@@ -30,6 +30,14 @@ public class Project {
     public List<String> getTechnologies() { return technologies; }
     public String getDepartment() { return department; }
 
+    public void setId(int id) { this.id = id; }
+    public void setName(String name) { this.name = name; }
+    public void setDescription(String description) { this.description = description; }
+    public void setStatus(String status) { this.status = status; }
+    public void setStatusLabel(String statusLabel) { this.statusLabel = statusLabel; }
+    public void setTechnologies(List<String> technologies) { this.technologies = technologies; }
+    public void setDepartment(String department) { this.department = department; }
+
     public int getStatusColor() {
         switch (status) {
             case "production":   return 0xFF38A169;
