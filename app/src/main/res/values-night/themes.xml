@@ -1,7 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
     <style name="Base.Theme.PortalinternoGrupoSolutia" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="colorPrimary">@color/primary_light</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/primary</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="android:colorBackground">#FF1A202C</item>
+        <item name="colorSurface">#FF2D3748</item>
+        <item name="colorOnSurface">#FFE2E8F0</item>
+        <item name="android:statusBarColor">#FF0F2444</item>
     </style>
 </resources>

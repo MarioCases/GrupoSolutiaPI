@@ -1,3 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PortalinternoGrupoSolutia</string>
+    <string name="app_name">Portal Grupo Solutia</string>
+
+    <!-- Navigation -->
+    <string name="nav_search">Buscar proyecto</string>
+    <string name="nav_switch_user">Cambiar usuario</string>
+    <string name="nav_filter_status">Estado</string>
+    <string name="nav_filter_tech">Tecnología</string>
+    <string name="filter_all">Todos</string>
+    <string name="filter_production">Producción</string>
+    <string name="filter_development">En Desarrollo</string>
+    <string name="filter_maintenance">Mantenimiento</string>
+
+    <!-- Content -->
+    <string name="title_catalog">Catálogo de Proyectos</string>
+    <string name="subtitle_catalog">Explora las herramientas y proyectos activos de la empresa</string>
+    <string name="results_count">%d resultados</string>
+    <string name="empty_state">No se encontraron proyectos\nPrueba a cambiar los filtros</string>
+
+    <!-- Roles -->
+    <string name="role_admin">Administrador</string>
+    <string name="role_tech">Tecnico</string>
+    <string name="role_visitor">Visitante</string>
+    <string name="role_admin_desc">Control total</string>
+    <string name="role_tech_desc">Control acotado</string>
+    <string name="role_visitor_desc">Solo visualización</string>
+
+    <!-- User dialog -->
+    <string name="dialog_select_user">Seleccionar usuario</string>
 </resources>
