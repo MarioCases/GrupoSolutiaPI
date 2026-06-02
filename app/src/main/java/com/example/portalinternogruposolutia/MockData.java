@@ -9,7 +9,7 @@ import java.util.List;
 public class MockData {
 
     public static List<Project> getProjects() {
-        return Arrays.asList(
+        List<Project> projects = Arrays.asList(
             new Project(1, "Gestor de Incidencias",
                 "Plataforma centralizada para la gestión y seguimiento de incidencias técnicas.",
                 "production", "Producción",
@@ -60,6 +60,12 @@ public class MockData {
                 "development", "En Desarrollo",
                 Arrays.asList("React", "TypeScript", "GraphQL", "Node.js"), "I+D")
         );
+
+        projects.get(0).addDocument("manual_incidencias.pdf");
+        projects.get(0).addDocument("guia_usuario.pdf");
+        projects.get(2).addDocument("manual_comunicacion.pdf");
+
+        return projects;
     }
 
     public static List<User> getUsers() {

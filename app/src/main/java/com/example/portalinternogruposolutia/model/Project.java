@@ -1,5 +1,6 @@
 package com.example.portalinternogruposolutia.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Project {
@@ -10,6 +11,7 @@ public class Project {
     private String statusLabel;
     private List<String> technologies;
     private String department;
+    private List<String> documents;
 
     public Project(int id, String name, String description, String status,
                    String statusLabel, List<String> technologies, String department) {
@@ -20,6 +22,7 @@ public class Project {
         this.statusLabel = statusLabel;
         this.technologies = technologies;
         this.department = department;
+        this.documents = new ArrayList<>();
     }
 
     public int getId() { return id; }
@@ -37,6 +40,12 @@ public class Project {
     public void setStatusLabel(String statusLabel) { this.statusLabel = statusLabel; }
     public void setTechnologies(List<String> technologies) { this.technologies = technologies; }
     public void setDepartment(String department) { this.department = department; }
+
+    public List<String> getDocuments() { return documents; }
+    public void setDocuments(List<String> documents) { this.documents = documents; }
+    public void addDocument(String doc) { this.documents.add(doc); }
+    public void removeDocument(String doc) { this.documents.remove(doc); }
+    public int getDocumentCount() { return documents.size(); }
 
     public int getStatusColor() {
         switch (status) {

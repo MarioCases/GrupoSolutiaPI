@@ -82,16 +82,40 @@
                 android:layout_marginTop="8dp"
                 android:orientation="horizontal" />
 
-            <TextView
-                android:id="@+id/projectDepartment"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:textSize="12sp"
-                android:textColor="#FF9CA3AF"
-                android:drawableStart="@drawable/ic_department"
-                android:drawablePadding="5dp"
-                tools:text="Sistemas" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/projectDepartment"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="12sp"
+                    android:textColor="#FF9CA3AF"
+                    android:drawableStart="@drawable/ic_department"
+                    android:drawablePadding="5dp"
+                    tools:text="Sistemas" />
+
+                <TextView
+                    android:id="@+id/btnDocuments"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp"
+                    android:textSize="11sp"
+                    android:textColor="#FF1A3C6E"
+                    android:drawableStart="@drawable/ic_attach"
+                    android:drawablePadding="4dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="@drawable/bg_tag"
+                    tools:text="3 docs" />
+
+            </LinearLayout>
 
         </LinearLayout>
 

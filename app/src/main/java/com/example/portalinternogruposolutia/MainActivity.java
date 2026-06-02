@@ -84,6 +84,7 @@ public class MainActivity extends AppCompatActivity {
 
         adapter.setOnProjectClickListener(this::onEditProject);
         adapter.setOnProjectLongClickListener(this::onDeleteProject);
+        adapter.setOnDocumentClickListener(this::onManageDocuments);
 
         setupSearch();
         setupStatusChips();
@@ -97,14 +98,26 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
         if (requestCode == REQUEST_FORM && resultCode == RESULT_OK && data != null) {
+            boolean deleted = data.getBooleanExtra(ProjectFormActivity.RESULT_DELETED, false);
+            int editId = data.getIntExtra(ProjectFormActivity.EXTRA_PROJECT_ID, -1);
+
+            if (deleted && editId >= 0) {
+                allProjects.removeIf(p -> p.getId() == editId);
+                updateTechChips();
+                applyFilters();
+                Toast.makeText(this, "Proyecto eliminado", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             String name = data.getStringExtra(ProjectFormActivity.RESULT_NAME);
             String description = data.getStringExtra(ProjectFormActivity.RESULT_DESCRIPTION);
             String status = data.getStringExtra(ProjectFormActivity.RESULT_STATUS);
             String techText = data.getStringExtra(ProjectFormActivity.RESULT_TECHNOLOGIES);
             String department = data.getStringExtra(ProjectFormActivity.RESULT_DEPARTMENT);
             String statusLabel = data.getStringExtra("statusLabel");
-            int editId = data.getIntExtra(ProjectFormActivity.EXTRA_PROJECT_ID, -1);
+            ArrayList<String> documents = data.getStringArrayListExtra(ProjectFormActivity.RESULT_DOCUMENTS);
 
             List<String> technologies = techText == null || techText.isEmpty()
                 ? new ArrayList<>()
@@ -114,8 +127,7 @@ public class MainActivity extends AppCompatActivity {
                     .collect(Collectors.toList());
 
             if (editId >= 0) {
-                for (int i = 0; i < allProjects.size(); i++) {
-                    Project p = allProjects.get(i);
+                for (Project p : allProjects) {
                     if (p.getId() == editId) {
                         p.setName(name);
                         p.setDescription(description);
@@ -123,12 +135,14 @@ public class MainActivity extends AppCompatActivity {
                         p.setStatusLabel(statusLabel);
                         p.setTechnologies(technologies);
                         p.setDepartment(department);
+                        p.setDocuments(documents != null ? documents : new ArrayList<>());
                         break;
                     }
                 }
             } else {
                 Project project = new Project(nextProjectId++, name, description,
                     status, statusLabel, technologies, department);
+                if (documents != null) project.setDocuments(documents);
                 allProjects.add(project);
             }
 
@@ -144,6 +158,7 @@ public class MainActivity extends AppCompatActivity {
         }
         Intent intent = new Intent(this, ProjectFormActivity.class);
         intent.putExtra(ProjectFormActivity.EXTRA_MODE, ProjectFormActivity.MODE_ADD);
+        intent.putExtra("role", currentUser.getRole());
         startActivityForResult(intent, REQUEST_FORM);
     }
 
@@ -155,22 +170,34 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, ProjectFormActivity.class);
         intent.putExtra(ProjectFormActivity.EXTRA_MODE, ProjectFormActivity.MODE_EDIT);
         intent.putExtra(ProjectFormActivity.EXTRA_PROJECT_ID, project.getId());
+        intent.putExtra("role", currentUser.getRole());
         intent.putExtra(ProjectFormActivity.RESULT_NAME, project.getName());
         intent.putExtra(ProjectFormActivity.RESULT_DESCRIPTION, project.getDescription());
         intent.putExtra(ProjectFormActivity.RESULT_STATUS, project.getStatus());
         intent.putExtra(ProjectFormActivity.RESULT_TECHNOLOGIES,
             String.join(", ", project.getTechnologies()));
         intent.putExtra(ProjectFormActivity.RESULT_DEPARTMENT, project.getDepartment());
+        intent.putStringArrayListExtra(ProjectFormActivity.RESULT_DOCUMENTS,
+            new ArrayList<>(project.getDocuments()));
         startActivityForResult(intent, REQUEST_FORM);
     }
 
     private void showProjectDetail(Project p) {
+        StringBuilder msg = new StringBuilder();
+        msg.append("Estado: ").append(p.getStatusLabel());
+        msg.append("\nDescripción: ").append(p.getDescription());
+        msg.append("\nTecnologías: ").append(String.join(", ", p.getTechnologies()));
+        msg.append("\nDepartamento: ").append(p.getDepartment());
+        if (p.getDocumentCount() > 0) {
+            msg.append("\n\nDocumentos:");
+            for (String doc : p.getDocuments()) {
+                msg.append("\n  • ").append(doc.split("\\|\\|\\|")[0]);
+            }
+        }
+
         new AlertDialog.Builder(this)
             .setTitle(p.getName())
-            .setMessage("Estado: " + p.getStatusLabel()
-                + "\nDescripción: " + p.getDescription()
-                + "\nTecnologías: " + String.join(", ", p.getTechnologies())
-                + "\nDepartamento: " + p.getDepartment())
+            .setMessage(msg.toString())
             .setPositiveButton("Cerrar", null)
             .show();
     }
@@ -180,18 +207,28 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Solo el administrador puede eliminar proyectos", Toast.LENGTH_SHORT).show();
             return true;
         }
-        new AlertDialog.Builder(this)
-            .setTitle("Eliminar proyecto")
-            .setMessage("¿Eliminar \"" + project.getName() + "\"?")
-            .setPositiveButton("Eliminar", (d, w) -> {
-                allProjects.remove(project);
-                updateTechChips();
-                applyFilters();
-                Toast.makeText(this, "Proyecto eliminado", Toast.LENGTH_SHORT).show();
-            })
-            .setNegativeButton("Cancelar", null)
-            .show();
         return true;
+    }
+
+    private void onManageDocuments(Project project) {
+        if (isReadOnly()) {
+            StringBuilder msg = new StringBuilder("Documentos:");
+            if (project.getDocumentCount() == 0) {
+                msg = new StringBuilder("Este proyecto no tiene documentos asociados.");
+            } else {
+                for (String doc : project.getDocuments()) {
+                    msg.append("\n  • ").append(doc.split("\\|\\|\\|")[0]);
+                }
+            }
+            new AlertDialog.Builder(this)
+                .setTitle("Documentos - " + project.getName())
+                .setMessage(msg.toString())
+                .setPositiveButton("Cerrar", null)
+                .show();
+            return;
+        }
+
+        onEditProject(project);
     }
 
     private void setupSearch() {

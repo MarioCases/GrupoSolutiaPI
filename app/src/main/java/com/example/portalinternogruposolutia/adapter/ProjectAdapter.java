@@ -21,6 +21,7 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
     private boolean readOnly;
     private OnProjectClickListener clickListener;
     private OnProjectLongClickListener longClickListener;
+    private OnDocumentClickListener documentClickListener;
 
     public interface OnProjectClickListener {
         void onProjectClick(Project project);
@@ -28,6 +29,10 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
 
     public interface OnProjectLongClickListener {
         boolean onProjectLongClick(Project project);
+    }
+
+    public interface OnDocumentClickListener {
+        void onDocumentClick(Project project);
     }
 
     public ProjectAdapter(List<Project> projects, boolean readOnly) {
@@ -41,6 +46,10 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
 
     public void setOnProjectLongClickListener(OnProjectLongClickListener listener) {
         this.longClickListener = listener;
+    }
+
+    public void setOnDocumentClickListener(OnDocumentClickListener listener) {
+        this.documentClickListener = listener;
     }
 
     public void updateList(List<Project> newList, boolean readOnly) {
@@ -66,6 +75,9 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
         h.statusLabel.setText(p.getStatusLabel());
         h.department.setText(p.getDepartment());
 
+        int docCount = p.getDocumentCount();
+        h.btnDocuments.setText(docCount + " doc" + (docCount != 1 ? "s" : ""));
+
         h.itemView.setAlpha(readOnly ? 0.6f : 1f);
 
         h.statusStrip.setBackgroundColor(p.getStatusColor());
@@ -88,6 +100,10 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
         h.itemView.setOnLongClickListener(v -> {
             return longClickListener != null && longClickListener.onProjectLongClick(p);
         });
+
+        h.btnDocuments.setOnClickListener(v -> {
+            if (documentClickListener != null) documentClickListener.onDocumentClick(p);
+        });
     }
 
     @Override
@@ -95,7 +111,7 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         View statusStrip;
-        TextView name, description, statusLabel, department;
+        TextView name, description, statusLabel, department, btnDocuments;
         LinearLayout tagsContainer;
 
         ViewHolder(View v) {
@@ -105,6 +121,7 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
             description = v.findViewById(R.id.projectDescription);
             statusLabel = v.findViewById(R.id.projectStatusLabel);
             department = v.findViewById(R.id.projectDepartment);
+            btnDocuments = v.findViewById(R.id.btnDocuments);
             tagsContainer = v.findViewById(R.id.tagsContainer);
         }
     }
