@@ -29,7 +29,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:paddingTop="?attr/actionBarSize"
+        android:paddingTop="4dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <!-- Search field -->
@@ -37,7 +37,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="0dp"
             app:cardBackgroundColor="#FFEDF2F7">
@@ -74,7 +74,7 @@
 
         </androidx.cardview.widget.CardView>
 
-        <!-- Status filter chips -->
+        <!-- Status filter -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -87,48 +87,87 @@
             android:textAllCaps="true"
             android:letterSpacing="0.08" />
 
-        <HorizontalScrollView
+        <androidx.appcompat.widget.AppCompatSpinner
+            android:id="@+id/spinnerStatus"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_form_input"
+            android:paddingHorizontal="12dp"
+            android:popupBackground="@android:color/white" />
+
+        <!-- Category + Tech row -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
             android:layout_marginTop="4dp"
-            android:scrollbars="none">
+            android:orientation="horizontal"
+            android:weightSum="10">
 
+            <!-- Category column -->
             <LinearLayout
-                android:id="@+id/statusChips"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingHorizontal="16dp" />
+                android:layout_weight="4"
+                android:orientation="vertical">
 
-        </HorizontalScrollView>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Categoría"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="#FF9CA3AF"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08" />
 
-        <!-- Tech filter chips -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:layout_marginStart="16dp"
-            android:text="Tecnología"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:textColor="#FF9CA3AF"
-            android:textAllCaps="true"
-            android:letterSpacing="0.08" />
+                <androidx.appcompat.widget.AppCompatSpinner
+                    android:id="@+id/spinnerCategory"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/bg_form_input"
+                    android:paddingHorizontal="12dp"
+                    android:popupBackground="@android:color/white" />
 
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:scrollbars="none">
+            </LinearLayout>
 
+            <!-- Spacer -->
+            <View
+                android:layout_width="8dp"
+                android:layout_height="0dp" />
+
+            <!-- Tech column -->
             <LinearLayout
-                android:id="@+id/techChips"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingHorizontal="16dp" />
+                android:layout_weight="6"
+                android:orientation="vertical">
 
-        </HorizontalScrollView>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tecnología"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="#FF9CA3AF"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08" />
+
+                <androidx.appcompat.widget.AppCompatSpinner
+                    android:id="@+id/spinnerTech"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/bg_form_input"
+                    android:paddingHorizontal="12dp"
+                    android:popupBackground="@android:color/white" />
+
+            </LinearLayout>
+
+        </LinearLayout>
 
         <!-- Results count -->
         <TextView
@@ -147,9 +186,9 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
+            android:clipToPadding="false"
             android:padding="8dp"
-            android:paddingTop="4dp"
-            android:clipToPadding="false" />
+            android:paddingTop="4dp" />
 
         <!-- Empty state -->
         <TextView
@@ -165,6 +204,58 @@
             android:gravity="center"
             android:lineSpacingExtra="6dp"
             android:layout_margin="32dp" />
+
+        <!-- Pagination -->
+        <LinearLayout
+            android:id="@+id/paginationBar"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:visibility="gone">
+
+            <ImageButton
+                android:id="@+id/btnPrevPage"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_chevron_left"
+                android:contentDescription="Página anterior"
+                android:scaleType="center" />
+
+            <EditText
+                android:id="@+id/pageInput"
+                android:layout_width="44dp"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:inputType="number"
+                android:maxLength="4"
+                android:textSize="14sp"
+                android:background="@drawable/bg_form_input"
+                android:padding="0dp"
+                android:importantForAutofill="no" />
+
+            <TextView
+                android:id="@+id/totalPages"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="de 1"
+                android:textSize="14sp"
+                android:textColor="#FF6B7280" />
+
+            <ImageButton
+                android:id="@+id/btnNextPage"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_chevron_right"
+                android:contentDescription="Página siguiente"
+                android:scaleType="center" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

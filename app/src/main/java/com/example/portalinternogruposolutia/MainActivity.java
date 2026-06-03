@@ -5,16 +5,19 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.LayoutInflater;
+import android.view.KeyEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
-import android.widget.LinearLayout;
+import android.widget.ImageButton;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -25,20 +28,23 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_FORM = 100;
+    private static final int PAGE_SIZE = 4;
 
     private RecyclerView recycler;
     private ProjectAdapter adapter;
-    private TextView emptyState;
-    private TextView resultsCount;
-    private EditText searchInput;
-    private LinearLayout statusChipsContainer;
-    private LinearLayout techChipsContainer;
+    private TextView emptyState, resultsCount, totalPages;
+    private EditText searchInput, pageInput;
+    private Spinner spinnerStatus, spinnerCategory, spinnerTech;
+    private ImageButton btnPrevPage, btnNextPage;
+    private View paginationBar;
     private FloatingActionButton fabAdd;
 
     private List<Project> allProjects;
@@ -46,9 +52,24 @@ public class MainActivity extends AppCompatActivity {
     private User currentUser;
 
     private String currentStatusFilter = "all";
+    private String currentCategoryFilter = "all";
     private String currentTechFilter = "all";
     private String searchQuery = "";
     private int nextProjectId = 100;
+
+    private List<Project> fullFilteredList = new ArrayList<>();
+    private int currentPage = 1;
+    private int totalPagesCount = 1;
+
+    private static final Map<String, List<String>> CATEGORIES = new HashMap<>();
+    static {
+        CATEGORIES.put("Frontend", Arrays.asList("React", "Vue", "Angular", "TypeScript"));
+        CATEGORIES.put("Backend", Arrays.asList("Node.js", "Python", ".NET", "Java",
+            "Express", "Django", "Flask", "Spring Boot", "GraphQL"));
+        CATEGORIES.put("Base de Datos", Arrays.asList("SQL", "SQL Server", "MongoDB",
+            "PostgreSQL", "MySQL", "Firebase", "Oracle"));
+        CATEGORIES.put("Cloud / Infra", Arrays.asList("AWS", "Azure", "Docker", "Terraform"));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +78,26 @@ public class MainActivity extends AppCompatActivity {
 
         allProjects = MockData.getProjects();
         users = MockData.getUsers();
-        currentUser = users.get(0);
+
+        String loginRole = getIntent().getStringExtra("role");
+        String loginName = getIntent().getStringExtra("userName");
+        if (loginRole != null) {
+            boolean found = false;
+            for (User u : users) {
+                if (u.getRole().equals(loginRole)) {
+                    currentUser = u;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                currentUser = new User(99, loginName != null ? loginName : "Usuario",
+                    loginRole, "U", "email@example.com");
+                users.add(currentUser);
+            }
+        } else {
+            currentUser = users.get(0);
+        }
 
         nextProjectId = allProjects.stream().mapToInt(Project::getId).max().orElse(10) + 1;
 
@@ -74,12 +114,18 @@ public class MainActivity extends AppCompatActivity {
         emptyState = findViewById(R.id.emptyState);
         resultsCount = findViewById(R.id.resultsCount);
         searchInput = findViewById(R.id.searchInput);
-        statusChipsContainer = findViewById(R.id.statusChips);
-        techChipsContainer = findViewById(R.id.techChips);
+        spinnerStatus = findViewById(R.id.spinnerStatus);
+        spinnerCategory = findViewById(R.id.spinnerCategory);
+        spinnerTech = findViewById(R.id.spinnerTech);
         fabAdd = findViewById(R.id.fabAdd);
+        paginationBar = findViewById(R.id.paginationBar);
+        btnPrevPage = findViewById(R.id.btnPrevPage);
+        btnNextPage = findViewById(R.id.btnNextPage);
+        pageInput = findViewById(R.id.pageInput);
+        totalPages = findViewById(R.id.totalPages);
 
         recycler.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new ProjectAdapter(getFilteredList(), isReadOnly());
+        adapter = new ProjectAdapter(new ArrayList<>(), isReadOnly());
         recycler.setAdapter(adapter);
 
         adapter.setOnProjectClickListener(this::onEditProject);
@@ -87,12 +133,122 @@ public class MainActivity extends AppCompatActivity {
         adapter.setOnDocumentClickListener(this::onManageDocuments);
 
         setupSearch();
-        setupStatusChips();
-        setupTechChips();
-        updateResultsCount(allProjects.size());
+        setupSpinners();
+        setupPagination();
+        applyFilters();
         updateFabVisibility();
 
         fabAdd.setOnClickListener(v -> onAddProject());
+    }
+
+    private void setupSpinners() {
+        ArrayAdapter<String> statusAdapter = new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_item,
+            new String[]{"Todos", "Producción", "En Desarrollo", "Mantenimiento"});
+        statusAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerStatus.setAdapter(statusAdapter);
+
+        spinnerStatus.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
+                String[] vals = {"all", "production", "development", "maintenance"};
+                currentStatusFilter = vals[pos];
+                currentPage = 1;
+                applyFilters();
+            }
+            @Override public void onNothingSelected(AdapterView<?> p) {}
+        });
+
+        List<String> categories = new ArrayList<>();
+        categories.add("Todas las tecnologías");
+        categories.addAll(CATEGORIES.keySet());
+
+        ArrayAdapter<String> catAdapter = new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_item, categories);
+        catAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerCategory.setAdapter(catAdapter);
+
+        rebuildTechSpinner(null);
+
+        spinnerCategory.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
+                currentCategoryFilter = pos == 0 ? "all" : categories.get(pos);
+                currentTechFilter = "all";
+                currentPage = 1;
+                rebuildTechSpinner(currentCategoryFilter.equals("all") ? null : currentCategoryFilter);
+                applyFilters();
+            }
+            @Override public void onNothingSelected(AdapterView<?> p) {}
+        });
+
+        spinnerTech.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
+                String selected = (String) p.getItemAtPosition(pos);
+                currentTechFilter = selected.equals("Todas") ? "all" : selected;
+                currentPage = 1;
+                applyFilters();
+            }
+            @Override public void onNothingSelected(AdapterView<?> p) {}
+        });
+    }
+
+    private void rebuildTechSpinner(String category) {
+        List<String> techs = new ArrayList<>();
+        techs.add("Todas");
+        if (category != null) {
+            List<String> catTechs = CATEGORIES.get(category);
+            if (catTechs != null) techs.addAll(catTechs);
+        } else {
+            CATEGORIES.values().forEach(techs::addAll);
+        }
+
+        ArrayAdapter<String> techAdapter = new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_item, techs);
+        techAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerTech.setAdapter(techAdapter);
+    }
+
+    private void setupPagination() {
+        btnPrevPage.setOnClickListener(v -> {
+            if (currentPage > 1) {
+                currentPage--;
+                showPage();
+            }
+        });
+
+        btnNextPage.setOnClickListener(v -> {
+            if (currentPage < totalPagesCount) {
+                currentPage++;
+                showPage();
+            }
+        });
+
+        pageInput.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_DONE
+                || (event != null && event.getAction() == KeyEvent.ACTION_DOWN
+                    && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                goToPageInput();
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private void goToPageInput() {
+        String text = pageInput.getText().toString().trim();
+        if (text.isEmpty()) return;
+        try {
+            int page = Integer.parseInt(text);
+            if (page >= 1 && page <= totalPagesCount) {
+                currentPage = page;
+                showPage();
+            } else {
+                pageInput.setText(String.valueOf(currentPage));
+                pageInput.selectAll();
+            }
+        } catch (NumberFormatException e) {
+            pageInput.setText(String.valueOf(currentPage));
+            pageInput.selectAll();
+        }
     }
 
     @Override
@@ -105,7 +261,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (deleted && editId >= 0) {
                 allProjects.removeIf(p -> p.getId() == editId);
-                updateTechChips();
+                currentPage = 1;
                 applyFilters();
                 Toast.makeText(this, "Proyecto eliminado", Toast.LENGTH_SHORT).show();
                 return;
@@ -146,7 +302,7 @@ public class MainActivity extends AppCompatActivity {
                 allProjects.add(project);
             }
 
-            updateTechChips();
+            currentPage = 1;
             applyFilters();
         }
     }
@@ -237,99 +393,65 @@ public class MainActivity extends AppCompatActivity {
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override public void afterTextChanged(Editable s) {
                 searchQuery = s.toString().toLowerCase().trim();
+                currentPage = 1;
                 applyFilters();
             }
         });
     }
 
-    private void setupStatusChips() {
-        String[][] statuses = {
-            {"all", "Todos"},
-            {"production", "Producción"},
-            {"development", "En Desarrollo"},
-            {"maintenance", "Mantenimiento"}
-        };
-
-        for (String[] s : statuses) {
-            View chip = createChip(s[1], s[0].equals("all"));
-            chip.setTag(s[0]);
-            chip.setOnClickListener(v -> {
-                String val = (String) v.getTag();
-                currentStatusFilter = currentStatusFilter.equals(val) ? "all" : val;
-                updateChipSelection(statusChipsContainer, currentStatusFilter);
-                applyFilters();
-            });
-            statusChipsContainer.addView(chip);
-        }
-    }
-
-    private void setupTechChips() {
-        techChipsContainer.removeAllViews();
-        View allChip = createChip("Todas", true);
-        allChip.setTag("all");
-        allChip.setOnClickListener(v -> {
-            currentTechFilter = "all";
-            updateChipSelection(techChipsContainer, "all");
-            applyFilters();
-        });
-        techChipsContainer.addView(allChip);
-
-        for (String tech : MockData.getTechnologies(allProjects)) {
-            View chip = createChip(tech, false);
-            chip.setTag(tech);
-            chip.setOnClickListener(v -> {
-                String val = (String) v.getTag();
-                currentTechFilter = currentTechFilter.equals(val) ? "all" : val;
-                updateChipSelection(techChipsContainer, currentTechFilter);
-                applyFilters();
-            });
-            techChipsContainer.addView(chip);
-        }
-    }
-
-    private void updateTechChips() {
-        currentTechFilter = "all";
-        setupTechChips();
-    }
-
-    private View createChip(String text, boolean selected) {
-        TextView chip = (TextView) LayoutInflater.from(this)
-                .inflate(R.layout.item_chip, statusChipsContainer, false);
-        chip.setText(text);
-        chip.setSelected(selected);
-        chip.setBackgroundResource(selected ? R.drawable.bg_chip_filter_active : R.drawable.bg_chip_filter);
-        chip.setTextColor(ContextCompat.getColorStateList(this, R.color.chip_text_color));
-        return chip;
-    }
-
-    private void updateChipSelection(LinearLayout container, String activeValue) {
-        for (int i = 0; i < container.getChildCount(); i++) {
-            View child = container.getChildAt(i);
-            boolean selected = child.getTag().equals(activeValue);
-            child.setSelected(selected);
-            child.setBackgroundResource(selected ? R.drawable.bg_chip_filter_active : R.drawable.bg_chip_filter);
-        }
-    }
-
     private List<Project> getFilteredList() {
         return allProjects.stream()
             .filter(p -> currentStatusFilter.equals("all") || p.getStatus().equals(currentStatusFilter))
-            .filter(p -> currentTechFilter.equals("all") || p.getTechnologies().contains(currentTechFilter))
+            .filter(p -> !currentTechFilter.equals("all")
+                ? p.getTechnologies().contains(currentTechFilter)
+                : currentCategoryFilter.equals("all")
+                    || p.getTechnologies().stream().anyMatch(t ->
+                        CATEGORIES.getOrDefault(currentCategoryFilter, Arrays.asList()).contains(t)))
             .filter(p -> searchQuery.isEmpty() || p.getName().toLowerCase().contains(searchQuery))
             .collect(Collectors.toList());
     }
 
     private void applyFilters() {
-        List<Project> filtered = getFilteredList();
-        adapter.updateList(filtered, isReadOnly());
-        boolean empty = filtered.isEmpty();
+        fullFilteredList = getFilteredList();
+        totalPagesCount = Math.max(1, (int) Math.ceil((double) fullFilteredList.size() / PAGE_SIZE));
+        if (currentPage > totalPagesCount) currentPage = totalPagesCount;
+        showPage();
+    }
+
+    private void showPage() {
+        int fromIndex = (currentPage - 1) * PAGE_SIZE;
+        int toIndex = Math.min(fromIndex + PAGE_SIZE, fullFilteredList.size());
+        List<Project> page;
+        if (fullFilteredList.isEmpty()) {
+            page = new ArrayList<>();
+        } else {
+            page = fullFilteredList.subList(fromIndex, toIndex);
+        }
+
+        adapter.updateList(page, isReadOnly());
+        boolean empty = fullFilteredList.isEmpty();
         emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
-        updateResultsCount(filtered.size());
+        updateResultsCount(fullFilteredList.size());
+        updatePaginationControls();
     }
 
     private void updateResultsCount(int count) {
         String text = count + " resultado" + (count != 1 ? "s" : "");
         resultsCount.setText(text);
+    }
+
+    private void updatePaginationControls() {
+        if (fullFilteredList.size() > PAGE_SIZE) {
+            paginationBar.setVisibility(View.VISIBLE);
+            btnPrevPage.setEnabled(currentPage > 1);
+            btnPrevPage.setAlpha(currentPage > 1 ? 1f : 0.3f);
+            btnNextPage.setEnabled(currentPage < totalPagesCount);
+            btnNextPage.setAlpha(currentPage < totalPagesCount ? 1f : 0.3f);
+            pageInput.setText(String.valueOf(currentPage));
+            totalPages.setText("de " + totalPagesCount);
+        } else {
+            paginationBar.setVisibility(View.GONE);
+        }
     }
 
     private void updateToolbarSubtitle() {
@@ -358,7 +480,8 @@ public class MainActivity extends AppCompatActivity {
                 currentUser = users.get(which);
                 updateToolbarSubtitle();
                 updateFabVisibility();
-                adapter.updateList(getFilteredList(), isReadOnly());
+                currentPage = 1;
+                applyFilters();
                 dialog.dismiss();
             })
             .setNegativeButton("Cancelar", null)
